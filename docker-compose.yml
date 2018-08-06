@@ -1,0 +1,168 @@
+version: "3"
+services:
+
+  mongodb_server:
+    container_name: mongodb_server
+    image: mongo
+    env_file: ./mongodb/dev.env
+    command:
+      - '-f'
+      - '/etc/mongod.conf'     
+    volumes:
+      - ./mongodb/mongod.conf:/etc/mongod.conf:ro
+      - ./mongodb/db:/data/db
+      - ./mongodb/log/:/var/log/mongodb/
+    networks:
+      - kudos_network
+
+  redis:
+    container_name: redis
+    build:
+      context: ./redis
+      dockerfile: Dockerfile 
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./redis/db:/data
+      - ./redis/log/:/var/log/redis/
+    networks:
+      - kudos_network
+
+  rabbit_mq:
+    container_name: rabbit_mq
+    image: rabbitmq  
+    networks:
+      - kudos_network
+
+  web_service_user:
+    container_name: web_service_user
+    env_file: ./web-service-user/dev.env
+    build:
+      context: ./web-services-images/users
+      dockerfile: Dockerfile
+    volumes:
+      - ./web-service-user/log/:/var/log/web-service-users/
+    links:
+      - "mongodb_server:mongodb"
+    ports:
+      - "8080:8080"
+    networks:
+      - kudos_network
+    depends_on:
+      - mongodb_server
+
+  stats:
+    container_name: stats
+    env_file: ./stats/dev.env
+    build:
+      context: ./web-services-images/stats
+      dockerfile: Dockerfile
+    volumes:
+      - ./stats/log/:/var/log/web-service-stats/
+    links:
+      - "rabbit_mq:rabbit_mq"
+      - "web_service_kudos:web_service_kudos"
+      - "web_service_user:web_service_user"
+    networks:
+      - kudos_network
+    depends_on:
+      - redis
+
+  web_service_kudos:
+    container_name: web_service_kudos
+    env_file: ./web-service-kudos/dev.env
+    build:
+      context: ./web-services-images/kudos
+      dockerfile: Dockerfile
+    volumes:
+      - ./web-service-kudos/log/:/var/log/web-service-kudos/
+    links:
+      - "redis:redis"
+      - "rabbit_mq:rabbit_mq"
+    ports:
+      - "9090:8080"
+    networks:
+      - kudos_network
+    depends_on:
+      - redis
+      - rabbit_mq
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb
+    networks:
+      - kudos_network
+
+  telegraf:
+    container_name: telegraf
+    image: telegraf
+    networks:
+      - kudos_network
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro      
+      - ./web-service-kudos/log/kudos.log:/var/log/web-service-kudos.log:ro
+      - ./web-service-user/log/users.log:/var/log/web-service-users.log:ro
+      - ./stats/log/stats.log:/var/log/stats.log:ro
+    links:
+      - influxdb
+
+  kapacitor:
+    container_name: kapacitor
+    image: kapacitor
+    hostname: kapacitor
+    networks:
+      - kudos_network
+    environment:
+      KAPACITOR_HOSTNAME: kapacitor
+      KAPACITOR_INFLUXDB_0_URLS_0: http://influxdb:8086
+    depends_on:
+      - influxdb
+
+  chronograf:
+    container_name: chronograf
+    image: chronograf
+    environment:
+      KAPACITOR_URL: http://kapacitor:9092
+      INFLUXDB_URL: http://influxdb:8086
+    networks:
+      - kudos_network
+    ports:
+      - "8888:8888"
+    depends_on:
+      - influxdb
+      - kapacitor 
+
+  # solr:
+  #   container_name: solr
+  #   image: solr
+  #   volumes:
+  #     - ./solr/mycores/:/opt/solr/server/solr/mycores/
+  #   entrypoint:
+  #     - docker-entrypoint.sh
+  #     - solr-precreate
+  #     - user_core    
+  #   ports:
+  #    - "8983:8983"
+  #   networks:
+  #     - kudos_network
+
+  # mongo_connector:
+  #   container_name: mongo_connector
+  #   build:
+  #     context: ./mongo-connector/
+  #     dockerfile: Dockerfile
+  #   command: ["./wait-for-it.sh", "solr:8983", "--", "mongo-connector", "-c", "/conf/config.json"]
+  #   volumes:
+  #     - ./mongo-connector/config.json:/conf/config.json:ro
+  #     - ./mongo-connector/log/:/var/log/mongo-connector/
+  #   links:
+  #     - "mongodb_server:mongodb"
+  #     - "solr:solr"
+  #   networks:
+  #     - kudos_network
+  #   depends_on:
+  #     - mongodb_server
+  #     - solr
+
+networks:
+  kudos_network:

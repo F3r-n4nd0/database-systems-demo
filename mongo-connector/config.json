@@ -1,0 +1,31 @@
+{
+    "mainAddress": "mongodb:27017",
+    "oplogFile": "/var/log/mongo-connector/oplog.timestamp",
+    "noDump": false,
+    "batchSize": -1,
+    "verbosity": 0,
+    "continueOnError": false,
+
+    "logging": {
+    	"type": "stream",
+        "type": "file",
+        "filename": "/var/log/mongo-connector/mongo-connector.log",
+        "format": "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s",
+        "rotationWhen": "D",
+        "rotationInterval": 1,
+        "rotationBackups": 10
+    },
+
+    "authentication": {
+        "adminUsername": "root",
+        "password": "example"
+    },
+
+    "docManagers": [
+        {
+            "docManager": "solr_doc_manager",
+            "targetURL": "http://solr:8983/solr/user_core",
+            "uniqueKey": "_id"
+        }
+    ]
+}
