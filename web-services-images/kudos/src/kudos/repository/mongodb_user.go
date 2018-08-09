@@ -108,7 +108,7 @@ func (r *redisKudosRepository) FetchAllKudos(pageSize int64, numberPage int64) (
 	filterKeys := paginateKeys(keys, int(skip), int(pageSize))
 	var allKudos []*model.Kudos
 	for _, key := range filterKeys {
-		kudo, err := r.GetByID(key)
+		kudo, err := r.getByAbsoluteID(key)
 		if err != nil {
 			return nil, err
 		}
@@ -139,5 +139,38 @@ func (r *redisKudosRepository) GetQuantityByUserName(userName string) (int, erro
 		return 0, err
 	}
 	return len(keys), nil
+
+}
+
+func (r *redisKudosRepository) GetByUserName(userName string) ([]*model.Kudos, error) {
+
+	filter := fmt.Sprintf("%s:*", userName)
+	keys, err := r.client.Keys(filter).Result()
+	if err != nil {
+		return nil, err
+	}
+	var allKudos []*model.Kudos
+	for _, key := range keys {
+		kudo, err := r.getByAbsoluteID(key)
+		if err != nil {
+			return nil, err
+		}
+		allKudos = append(allKudos, kudo)
+	}
+	return allKudos, nil
+
+}
+
+func (r *redisKudosRepository) getByAbsoluteID(id string) (*model.Kudos, error) {
+
+	val, err := r.client.Get(id).Result()
+	if err != nil {
+		return nil, err
+	}
+	kudosFound, err := r.stringToKudos(val)
+	if err != nil {
+		return nil, err
+	}
+	return kudosFound, nil
 
 }

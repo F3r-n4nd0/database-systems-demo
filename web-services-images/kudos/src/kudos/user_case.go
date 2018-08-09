@@ -8,4 +8,5 @@ type UseCase interface {
 	DeleteByID(id string) error
 	FetchAllKudos(pageSize int64, numberPage int64) ([]*model.Kudos, error)
 	GetQuantityByUserName(userName string) (int, error)
+	GetByUserName(userName string) ([]*model.Kudos, error)
 }

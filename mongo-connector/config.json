@@ -1,5 +1,5 @@
 {
-    "mainAddress": "mongodb:27017",
+    "mainAddress": "mongodb://root:example@mongodb_server:27017/admin",
     "oplogFile": "/var/log/mongo-connector/oplog.timestamp",
     "noDump": false,
     "batchSize": -1,
@@ -7,7 +7,7 @@
     "continueOnError": false,
 
     "logging": {
-    	"type": "stream",
+        "type": "stream",
         "type": "file",
         "filename": "/var/log/mongo-connector/mongo-connector.log",
         "format": "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s",
@@ -16,16 +16,12 @@
         "rotationBackups": 10
     },
 
-    "authentication": {
-        "adminUsername": "root",
-        "password": "example"
-    },
-
     "docManagers": [
         {
             "docManager": "solr_doc_manager",
             "targetURL": "http://solr:8983/solr/user_core",
-            "uniqueKey": "_id"
+            "uniqueKey": "_id",
+            "autoCommitInterval": 0
         }
     ]
 }

@@ -19,6 +19,13 @@ import (
 
 func main() {
 
+	modeType := os.Getenv("MODE")
+
+	isProduction := false
+	if modeType == "PRODUCTION" {
+		isProduction = true
+	}
+
 	webAddr := os.Getenv("WEB_ADDRESS")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisHost := os.Getenv("REDIS_HOST")
@@ -26,7 +33,7 @@ func main() {
 	rabbitMqHost := os.Getenv("RABBIT_MQ_HOST")
 	rabbitMqPort := os.Getenv("RABBIT_MQ_PORT")
 
-	configureLog()
+	configureLog(isProduction)
 
 	clientDb := connectDataBase(redisHost, redisPort, redisPassword)
 	rabbitMqChannel, routingKey := configureRabbitMq(rabbitMqHost, rabbitMqPort)
@@ -57,13 +64,17 @@ func createGinHTTPDelivery() *gin.Engine {
 
 }
 
-func configureLog() {
-	file, err := os.OpenFile("/var/log/web-service-kudos/kudos.log", os.O_CREATE|os.O_WRONLY, 0666)
-	if err == nil {
-		log.SetOutput(file)
-	} else {
-		log.Info("Failed to log to file, using default stderr")
+func configureLog(isProduction bool) {
+
+	if isProduction {
+		file, err := os.OpenFile("/var/log/web-service-kudos/kudos.log", os.O_CREATE|os.O_WRONLY, 0666)
+		if err == nil {
+			log.SetOutput(file)
+		} else {
+			log.Info("Failed to log to file, using default stderr")
+		}
 	}
+
 }
 
 func connectDataBase(redisHost string, redisPort string, redisPassword string) *redis.Client {

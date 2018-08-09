@@ -9,8 +9,10 @@ require (
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/manucorporat/sse v0.0.0-20160126180136-ee05b128a739 // indirect
 	github.com/mattn/go-isatty v0.0.3 // indirect
+	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699
 	github.com/mongodb/mongo-go-driver v0.0.10
 	github.com/sirupsen/logrus v1.0.6
+	github.com/vanng822/go-solr v0.0.0-20180801053103-537618faa344
 	golang.org/x/crypto v0.0.0-20180802221240-56440b844dfe // indirect
 	golang.org/x/net v0.0.0-20180801234040-f4c29de78a2a // indirect
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f // indirect

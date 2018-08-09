@@ -8,4 +8,5 @@ type User struct {
 	QuantityKudos int32     `json:"quantity_kudos"`
 	CreateAt      time.Time `json:"create_at"`
 	UpdateAt      time.Time `json:"update_at"`
+	Kudos         []*Kudos  `json:"kudos,omitempty"`
 }

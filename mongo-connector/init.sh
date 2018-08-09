@@ -1,0 +1,1 @@
+mongo-connector -m "mongodb://root:example@mongodb:27017/admin" -t "http://solr:8983/solr/user_core" -d solr_doc_manager --auto-commit-interval=0

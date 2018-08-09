@@ -10,4 +10,5 @@ type UseCase interface {
 	DeleteByUserName(userName string) error
 	FetchAllUsers(pageSize int64, numberPage int64) ([]*model.User, error)
 	UpdateQuantityKudos(userName string, quantity int) error
+	GetByUserNameWithKudos(userName string) (*model.User, error)
 }

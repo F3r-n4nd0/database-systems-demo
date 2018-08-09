@@ -24,6 +24,7 @@ func NewKudosGinHTTPHandler(e *gin.Engine, kc kudos.UseCase) {
 	routeGroupV1.GET("/kudos/:id", handler.GetByID)
 	routeGroupV1.DELETE("/kudos/:id", handler.DeleteByID)
 	routeGroupV1.GET("/kudos", handler.FetchAllKudos)
+	routeGroupV1.GET("/user/kudos/:user_name", handler.GetKudosByUserName)
 	routeGroupV1.GET("/quantity/kudos/:user_name", handler.GetQuantityByUserName)
 }
 
@@ -128,5 +129,19 @@ func (u *kudosHandler) GetQuantityByUserName(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"quantity": quantity,
 	})
+
+}
+
+func (u *kudosHandler) GetKudosByUserName(c *gin.Context) {
+
+	userName := c.Param("user_name")
+	kudos, err := u.KudosUseCase.GetByUserName(userName)
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusInternalServerError, ResponseError{Message: err.Error()})
+		return
+	}
+	log.Info("Get kudos by user name")
+	c.JSON(http.StatusOK, kudos)
 
 }

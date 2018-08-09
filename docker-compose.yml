@@ -4,16 +4,23 @@ services:
   mongodb_server:
     container_name: mongodb_server
     image: mongo
-    env_file: ./mongodb/dev.env
+    env_file: ./mongodb/dev.env   
     command:
-      - '-f'
-      - '/etc/mongod.conf'     
+      - '--auth'      
+      - '--dbpath'
+      - '/data/db'
+      - '--replSet'
+      - 'rs0' 
+      - '--logpath'
+      - '/var/log/mongodb/mongod.log' 
+    ports:
+      - '27017:27017'
     volumes:
-      - ./mongodb/mongod.conf:/etc/mongod.conf:ro
+      - ./mongodb/scripts/:/docker-entrypoint-initdb.d/:ro  
       - ./mongodb/db:/data/db
       - ./mongodb/log/:/var/log/mongodb/
     networks:
-      - kudos_network
+      - kudos_network  
 
   redis:
     container_name: redis
@@ -24,31 +31,18 @@ services:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - ./redis/db:/data
       - ./redis/log/:/var/log/redis/
+    ports:
+      - '6379:6379'
     networks:
       - kudos_network
 
   rabbit_mq:
     container_name: rabbit_mq
     image: rabbitmq  
-    networks:
-      - kudos_network
-
-  web_service_user:
-    container_name: web_service_user
-    env_file: ./web-service-user/dev.env
-    build:
-      context: ./web-services-images/users
-      dockerfile: Dockerfile
-    volumes:
-      - ./web-service-user/log/:/var/log/web-service-users/
-    links:
-      - "mongodb_server:mongodb"
     ports:
-      - "8080:8080"
+      - '5672:5672'
     networks:
       - kudos_network
-    depends_on:
-      - mongodb_server
 
   stats:
     container_name: stats
@@ -59,13 +53,63 @@ services:
     volumes:
       - ./stats/log/:/var/log/web-service-stats/
     links:
-      - "rabbit_mq:rabbit_mq"
-      - "web_service_kudos:web_service_kudos"
-      - "web_service_user:web_service_user"
+      - 'rabbit_mq:rabbit_mq'
     networks:
       - kudos_network
     depends_on:
+      - rabbit_mq
       - redis
+
+  solr:
+    container_name: solr
+    image: solr
+    volumes:
+      - ./solr/mycores/:/opt/solr/server/solr/mycores/
+    entrypoint:
+      - docker-entrypoint.sh
+      - solr-precreate
+      - user_core    
+    ports:
+     - "8983:8983"
+    networks:
+      - kudos_network
+
+  mongo_connector:
+    container_name: mongo_connector
+    build:
+      context: ./mongo-connector/
+      dockerfile: Dockerfile
+    # command: ["./wait-for-it.sh", "solr:8983", "--", "mongo-connector", "-c", "/conf/config.json"]
+    command: ["/bin/sleep", "1000000"]    
+    volumes:
+      - ./mongo-connector/config.json:/conf/config.json:ro
+      - ./mongo-connector/log/mongo-connector.log:/mongo-connector.log
+    links:
+      - 'mongodb_server:mongodb_server'
+      - 'solr:solr'
+    networks:
+      - kudos_network
+    depends_on:
+      - mongodb_server
+      - solr
+
+  web_service_user:
+    container_name: web_service_user
+    env_file: ./web-service-user/dev.env
+    build:
+      context: ./web-services-images/users
+      dockerfile: Dockerfile
+    volumes:
+      - ./web-service-user/log/:/var/log/web-service-users/
+    links:
+      - 'mongodb_server:mongodb_server'
+      - 'web_service_kudos:web_service_kudos'
+    ports:
+      - "8080:8080"
+    networks:
+      - kudos_network
+    depends_on:
+      - mongodb_server
 
   web_service_kudos:
     container_name: web_service_kudos
@@ -76,8 +120,8 @@ services:
     volumes:
       - ./web-service-kudos/log/:/var/log/web-service-kudos/
     links:
-      - "redis:redis"
-      - "rabbit_mq:rabbit_mq"
+      - 'redis:redis'
+      - 'rabbit_mq:rabbit_mq'      
     ports:
       - "9090:8080"
     networks:
@@ -100,9 +144,9 @@ services:
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro      
-      - ./web-service-kudos/log/kudos.log:/var/log/web-service-kudos.log:ro
-      - ./web-service-user/log/users.log:/var/log/web-service-users.log:ro
-      - ./stats/log/stats.log:/var/log/stats.log:ro
+      - ./web-service-kudos/log/:/var/log-web-service-kudos/:ro
+      - ./web-service-user/log/:/var/log-web-service-user/:ro
+      - ./stats/log/:/var/log-stats/:ro
     links:
       - influxdb
 
@@ -132,37 +176,7 @@ services:
       - influxdb
       - kapacitor 
 
-  # solr:
-  #   container_name: solr
-  #   image: solr
-  #   volumes:
-  #     - ./solr/mycores/:/opt/solr/server/solr/mycores/
-  #   entrypoint:
-  #     - docker-entrypoint.sh
-  #     - solr-precreate
-  #     - user_core    
-  #   ports:
-  #    - "8983:8983"
-  #   networks:
-  #     - kudos_network
-
-  # mongo_connector:
-  #   container_name: mongo_connector
-  #   build:
-  #     context: ./mongo-connector/
-  #     dockerfile: Dockerfile
-  #   command: ["./wait-for-it.sh", "solr:8983", "--", "mongo-connector", "-c", "/conf/config.json"]
-  #   volumes:
-  #     - ./mongo-connector/config.json:/conf/config.json:ro
-  #     - ./mongo-connector/log/:/var/log/mongo-connector/
-  #   links:
-  #     - "mongodb_server:mongodb"
-  #     - "solr:solr"
-  #   networks:
-  #     - kudos_network
-  #   depends_on:
-  #     - mongodb_server
-  #     - solr
+  
 
 networks:
   kudos_network:

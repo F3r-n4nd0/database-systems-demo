@@ -13,11 +13,13 @@ import (
 
 type UserHandler struct {
 	UserUseCase user.UseCase
+	SearchDB    user.SearchDB
 }
 
-func NewUserGinHTTPHandler(e *gin.Engine, uc user.UseCase) {
+func NewUserGinHTTPHandler(e *gin.Engine, uc user.UseCase, sdb user.SearchDB) {
 	handler := &UserHandler{
 		UserUseCase: uc,
+		SearchDB:    sdb,
 	}
 	routeGroupV1 := e.Group("/v1")
 	routeGroupV1.POST("/user", handler.Store)
@@ -25,6 +27,9 @@ func NewUserGinHTTPHandler(e *gin.Engine, uc user.UseCase) {
 	routeGroupV1.DELETE("/user/:user_name", handler.DeleteByUserName)
 	routeGroupV1.GET("/user", handler.FetchAllUsers)
 	routeGroupV1.PUT("/user/kudos", handler.UpdateKudosQuantity)
+	routeGroupV1.GET("/find/user/:query", handler.FindUser)
+	routeGroupV1.GET("/kudos/user/:user_name", handler.GetByUserNameWithKudos)
+
 }
 
 type ResponseError struct {
@@ -135,5 +140,33 @@ func (u *UserHandler) UpdateKudosQuantity(c *gin.Context) {
 	}
 	log.Info("Quantity kudos updated")
 	c.JSON(http.StatusOK, nil)
+
+}
+
+func (u *UserHandler) FindUser(c *gin.Context) {
+
+	query := c.Param("query")
+	usersFound, err := u.SearchDB.FindUser(query)
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusInternalServerError, ResponseError{Message: err.Error()})
+		return
+	}
+	log.Info("Finding User")
+	c.JSON(http.StatusOK, usersFound)
+
+}
+
+func (u *UserHandler) GetByUserNameWithKudos(c *gin.Context) {
+
+	userName := c.Param("user_name")
+	userFound, err := u.UserUseCase.GetByUserNameWithKudos(userName)
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusInternalServerError, ResponseError{Message: err.Error()})
+		return
+	}
+	log.Info("User showed")
+	c.JSON(http.StatusOK, userFound)
 
 }

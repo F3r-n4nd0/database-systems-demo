@@ -93,3 +93,13 @@ func (k *kudosUserCase) GetQuantityByUserName(userName string) (int, error) {
 	return quantityKudos, nil
 
 }
+
+func (k *kudosUserCase) GetByUserName(userName string) ([]*model.Kudos, error) {
+
+	kudos, err := k.kudosRepos.GetByUserName(userName)
+	if err != nil {
+		return nil, err
+	}
+	return kudos, nil
+
+}

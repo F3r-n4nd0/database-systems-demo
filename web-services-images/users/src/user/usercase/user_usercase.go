@@ -7,12 +7,14 @@ import (
 )
 
 type userUserCase struct {
-	userRepos user.Repository
+	userRepos       user.Repository
+	kudosWebService user.WebServiceKudos
 }
 
-func NewUserUserCase(u user.Repository) user.UseCase {
+func NewUserUserCase(u user.Repository, kws user.WebServiceKudos) user.UseCase {
 	return &userUserCase{
-		userRepos: u,
+		userRepos:       u,
+		kudosWebService: kws,
 	}
 }
 
@@ -70,5 +72,20 @@ func (u *userUserCase) UpdateQuantityKudos(userName string, quantity int) error 
 		return err
 	}
 	return nil
+
+}
+
+func (u *userUserCase) GetByUserNameWithKudos(userName string) (*model.User, error) {
+
+	user, err := u.userRepos.GetByUserName(userName)
+	if err != nil {
+		return nil, err
+	}
+	userkudos, err := u.kudosWebService.GetKudosByUserName(userName)
+	if err != nil {
+		return nil, err
+	}
+	user.Kudos = userkudos
+	return user, nil
 
 }
